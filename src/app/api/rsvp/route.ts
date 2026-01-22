@@ -10,6 +10,30 @@ type RSVP = {
   createdAt: string;
 };
 
+async function verifyTurnstile(token: string, ip?: string | null) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+
+  // Dev-friendly: if secret not set, skip verification
+  if (!secret) return { ok: true as const, skipped: true as const };
+
+  if (!token) return { ok: false as const, error: "Anti-spam verification required." };
+
+  const form = new FormData();
+  form.append("secret", secret);
+  form.append("response", token);
+  if (ip) form.append("remoteip", ip);
+
+  const resp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: form
+  });
+
+  const data = (await resp.json()) as { success: boolean };
+  if (!data.success) return { ok: false as const, error: "Anti-spam verification failed." };
+
+  return { ok: true as const, skipped: false as const };
+}
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "rsvps.json");
 
