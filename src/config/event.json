@@ -1,0 +1,51 @@
+{
+  "brand": {
+    "name": "Special Fiesta",
+    "accent": "Fiesta"
+  },
+  "hero": {
+    "badge": "✨ Special Fiesta • Landing Starter",
+    "titlePrefix": "Make your next event feel",
+    "titleEmphasis": "special",
+    "subtitle": "A modern landing page for celebrations—clean design, responsive sections, and an RSVP flow."
+  },
+  "about": {
+    "title": "What is Special Fiesta?",
+    "p1": "A delightful starter template for any celebration: birthdays, cultural nights, college fests, house parties, meetups—anything.",
+    "p2": "You can customize the palette, sections, and RSVP behavior easily.",
+    "facts": [
+      ["Theme", "Midnight Neon"],
+      ["Stack", "Next.js + TS"],
+      ["Styling", "Tailwind CSS"],
+      ["Deploy", "Vercel-ready"]
+    ]
+  },
+  "schedule": {
+    "title": "Schedule",
+    "subtitle": "A simple flow you can tweak anytime.",
+    "items": [
+      { "time": "6:00 PM", "title": "Welcome & Check-in", "desc": "Grab your badge, music starts." },
+      { "time": "7:00 PM", "title": "Food Opens", "desc": "Street-style bites + mocktails." },
+      { "time": "8:30 PM", "title": "Games & Challenges", "desc": "Teams, prizes, chaos (good kind)." },
+      { "time": "10:00 PM", "title": "Finale", "desc": "Photos, shoutouts, last dance." }
+    ]
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Placeholder tiles—swap with real photos later.",
+    "count": 8,
+    "labelPrefix": "Moment"
+  },
+  "faq": {
+    "title": "FAQ",
+    "items": [
+      { "q": "Can I use this for any event?", "a": "Yes—rename, edit sections, ship." },
+      { "q": "Does it include RSVP?", "a": "Yes—there’s an RSVP form with server-side validation." },
+      { "q": "Is it mobile-friendly?", "a": "Fully responsive, built with Tailwind." }
+    ]
+  },
+  "footer": {
+    "line1": "All rights reserved.",
+    "line2": "Built with Next.js • Tailwind • Good vibes"
+  }
+}
