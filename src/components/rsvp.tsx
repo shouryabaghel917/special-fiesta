@@ -3,7 +3,77 @@
 import { useMemo, useState } from "react";
 import { Container } from "./ui/container";
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        el: HTMLElement,
+        opts: { sitekey: string; callback: (token: string) => void; "error-callback"?: () => void }
+      ) => string;
+      reset: (widgetId?: string) => void;
+    };
+  }
+}
+
 type Status = "idle" | "loading" | "success" | "error";
+
+function TurnstileWidget({
+  onToken
+}: {
+  onToken: (token: string) => void;
+}) {
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  // If not configured, render nothing (dev-friendly)
+  if (!siteKey) return null;
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-zinc-950/50 p-3">
+      <p className="mb-2 text-xs text-zinc-400">Anti-spam check</p>
+
+      {/* script */}
+      <script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        async
+        defer
+      />
+
+      {/* widget container */}
+      <div
+        id="cf-turnstile"
+        className="min-h-[65px]"
+        ref={(el) => {
+          if (!el) return;
+          if (!siteKey) return;
+
+          // Prevent double-render
+          if ((el as any)._rendered) return;
+          (el as any)._rendered = true;
+
+          const tryRender = () => {
+            if (!window.turnstile) return false;
+
+            window.turnstile.render(el, {
+              sitekey: siteKey,
+              callback: (token) => onToken(token),
+              "error-callback": () => onToken("")
+            });
+
+            return true;
+          };
+
+          // attempt now; if script not ready yet, retry shortly
+          if (!tryRender()) {
+            const t = setInterval(() => {
+              if (tryRender()) clearInterval(t);
+            }, 200);
+            setTimeout(() => clearInterval(t), 6000);
+          }
+        }}
+      />
+    </div>
+  );
+}
 
 export function RSVP() {
   const [status, setStatus] = useState<Status>("idle");
@@ -13,6 +83,7 @@ export function RSVP() {
   const [email, setEmail] = useState("");
   const [guests, setGuests] = useState(1);
   const [note, setNote] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const disabled = useMemo(() => status === "loading", [status]);
 
@@ -25,10 +96,10 @@ export function RSVP() {
       const res = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, guests, note }),
+        body: JSON.stringify({ name, email, guests, note, turnstileToken })
       });
 
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean; error?: string; storage?: string };
 
       if (!res.ok || !data.ok) {
         setStatus("error");
@@ -42,6 +113,7 @@ export function RSVP() {
       setEmail("");
       setGuests(1);
       setNote("");
+      setTurnstileToken("");
     } catch {
       setStatus("error");
       setMessage("Network error. Try again.");
@@ -55,14 +127,11 @@ export function RSVP() {
           <div>
             <h2 className="text-2xl font-semibold md:text-3xl">RSVP</h2>
             <p className="mt-2 text-zinc-300 leading-relaxed">
-              Reserve your spot. This uses a simple API route you can extend into a real backend later.
+              Reserve your spot. Protected with anti-spam verification when configured.
             </p>
           </div>
 
-          <form
-            onSubmit={submit}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6"
-          >
+          <form onSubmit={submit} className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <div className="grid gap-4">
               <label className="grid gap-2 text-sm">
                 <span className="text-zinc-200">Name</span>
@@ -113,6 +182,8 @@ export function RSVP() {
                 />
               </label>
 
+              <TurnstileWidget onToken={setTurnstileToken} />
+
               <button
                 type="submit"
                 disabled={disabled}
@@ -126,7 +197,7 @@ export function RSVP() {
                   className={[
                     "text-sm",
                     status === "success" ? "text-emerald-300" : "",
-                    status === "error" ? "text-rose-300" : "",
+                    status === "error" ? "text-rose-300" : ""
                   ].join(" ")}
                 >
                   {message}
