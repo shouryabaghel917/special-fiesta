@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { sendRsvpEmails } from "@/lib/email";
 
 type RSVP = {
   name: string;
@@ -23,7 +24,7 @@ async function saveLocally(entry: RSVP) {
     existing = JSON.parse(raw) as RSVP[];
     if (!Array.isArray(existing)) existing = [];
   } catch {
-    // file doesn't exist yet or invalid JSON; start fresh
+    // ignore
   }
 
   existing.unshift(entry);
@@ -49,7 +50,6 @@ async function verifyTurnstile(token: string, ip?: string | null) {
   });
 
   const data = (await resp.json()) as { success?: boolean };
-
   if (!data.success) return { ok: false as const, error: "Anti-spam verification failed." };
 
   return { ok: true as const, skipped: false as const };
@@ -70,17 +70,10 @@ export async function POST(req: Request) {
     const guests = Number.isFinite(body.guests) ? Number(body.guests) : 1;
 
     if (!name || !email) {
-      return NextResponse.json(
-        { ok: false, error: "Name and email are required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Name and email are required." }, { status: 400 });
     }
-
     if (guests < 1 || guests > 10) {
-      return NextResponse.json(
-        { ok: false, error: "Guests must be between 1 and 10." },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Guests must be between 1 and 10." }, { status: 400 });
     }
 
     // Turnstile verification (server-side)
@@ -98,7 +91,9 @@ export async function POST(req: Request) {
       createdAt: new Date().toISOString()
     };
 
-    // Try Supabase first (if configured)
+    // Storage: Supabase first; fallback to local JSON
+    let storage: "supabase" | "local" | "local_fallback" = "local";
+
     const supabase = getSupabaseServerClient();
     if (supabase) {
       const { error } = await supabase.from("rsvps").insert({
@@ -110,27 +105,35 @@ export async function POST(req: Request) {
       });
 
       if (!error) {
-        return NextResponse.json({
-          ok: true,
-          storage: "supabase",
-          turnstile: v.skipped ? "skipped" : "verified"
-        });
+        storage = "supabase";
+      } else {
+        await saveLocally(entry);
+        storage = "local_fallback";
       }
-
-      // Supabase failed: fallback to local JSON
+    } else {
       await saveLocally(entry);
-      return NextResponse.json({
-        ok: true,
-        storage: "local_fallback",
-        turnstile: v.skipped ? "skipped" : "verified"
-      });
+      storage = "local";
     }
 
-    // No Supabase: local JSON
-    await saveLocally(entry);
+    // Email confirmations (non-blocking for RSVP success)
+    let emailStatus: "sent" | "skipped" | "failed" = "skipped";
+    try {
+      const res = await sendRsvpEmails({
+        name: entry.name,
+        email: entry.email,
+        guests: entry.guests,
+        note: entry.note,
+        createdAtISO: entry.createdAt
+      });
+      emailStatus = res.sent ? "sent" : "skipped";
+    } catch {
+      emailStatus = "failed";
+    }
+
     return NextResponse.json({
       ok: true,
-      storage: "local",
+      storage,
+      email: emailStatus,
       turnstile: v.skipped ? "skipped" : "verified"
     });
   } catch {
