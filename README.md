@@ -5,6 +5,23 @@ Designed to be clean, responsive, and production-ready — perfect for celebrati
 
 ---
 
+## ✉️ Email Confirmation (Resend)
+
+The RSVP endpoint can send confirmation emails via Resend.
+
+### Environment variables
+- `RESEND_API_KEY` (server-only)
+- `RESEND_FROM` (server-only)  
+  Example: `Special Fiesta <onboarding@resend.dev>` (or your verified domain sender)
+- `RESEND_ADMIN_TO` (optional, server-only)  
+  Example: `you@yourdomain.com` to get notified on every RSVP
+
+### Notes
+- If `RESEND_API_KEY` or `RESEND_FROM` is missing, emails are skipped (dev-friendly).
+- Email failures do not block RSVP success.
+
+---
+
 ## ✨ Features
 
 - 🌈 Modern, aesthetic UI with a premium feel
