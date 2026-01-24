@@ -34,6 +34,20 @@ The RSVP endpoint can send confirmation emails via Resend.
 
 ---
 
+## 🔐 Admin Dashboard
+
+A protected admin dashboard is available at `/admin`.
+
+### Environment variables
+- `ADMIN_SECRET` — password used on `/admin/login`
+- `ADMIN_COOKIE_SECRET` — random secret used to sign the admin session cookie
+
+### Notes
+- Auth uses an HttpOnly cookie (no secret exposure in client JS).
+- Middleware blocks access to `/admin` unless the session cookie is valid.
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Framework:** Next.js (App Router)
